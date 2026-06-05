@@ -2,8 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 import socket
 import datetime
-import ipapi
-from urllib.parse import urlparse
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import time
@@ -13,6 +11,21 @@ def tambah_skema(url):
     if not url.startswith('http'):
         url = 'https://' + url
     return url
+
+def get_ip_info(ip):
+    # Ganti ipapi -> ip-api.com
+    try:
+        url = f"http://ip-api.com/json/{ip}?fields=status,org,country"
+        r = requests.get(url, timeout=5)
+        data = r.json()
+        if data['status'] == 'success':
+            return {
+                'org': data.get('org', 'Unknown'),
+                'country': data.get('country', 'Unknown')
+            }
+    except:
+        pass
+    return {'org': 'Unknown', 'country': 'Unknown'}
 
 def scan_satu_url(url, f):
     def tulis(teks):
@@ -27,20 +40,20 @@ def scan_satu_url(url, f):
         domain = urlparse(url).netloc
         ip = socket.gethostbyname(domain)
         tulis(f"IP: {ip}")
-        tulis(f"DNS: {domain} -> {ip}")  # DNS ditambahin
+        tulis(f"DNS: {domain} -> {ip}")
 
-        data_ip = ipapi.location(ip=ip)
+        # Pake ip-api.com, nggak perlu install library lagi
+        data_ip = get_ip_info(ip)
         tulis(f"ISP: {data_ip.get('org', 'Unknown')}")
+        tulis(f"Country: {data.get('country', 'Unknown')}")  # bonus info
 
         with requests.get(url, timeout=15, stream=True, verify=False) as r:
             tulis(f"Status: {r.status_code}")
             
-            # [HEADER] dihapus, langsung server + cloudflare
             server = r.headers.get('Server', 'Not detected')
             tulis(f"Server: {server}")
             tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'}")
 
-            # Baca max 500KB biar hemat RAM
             content = b""
             for chunk in r.iter_content(chunk_size=8192):
                 content += chunk
