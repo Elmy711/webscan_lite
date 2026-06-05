@@ -32,9 +32,8 @@ f.write(f'BATCH SCAN {len(urls)} URL\n')
 
 for u in urls:
     u = skema(u)
-    # <-- ini yang diganti, tambah "URL: " di depan
-    print(f'\nURL: {u}')
-    f.write(f'\nURL: {u}\n')
+    print(f'\nURL: {u}')        
+    f.write(f'\nURL: {u}\n')   
     
     try:
         d = urlparse(u).netloc
