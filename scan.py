@@ -3,17 +3,13 @@ from bs4 import BeautifulSoup
 import socket
 from urllib.parse import urlparse
 import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
+urllib3.disable_warnings()
 
 GREEN = '\033[92m'
 RED = '\033[91m'
 YELLOW = '\033[93m'
 RESET = '\033[0m'
 CYAN = '\033[96m'
-
-lock = threading.Lock()
 
 def tambah_skema(url):
     url = url.strip()
@@ -23,8 +19,7 @@ def tambah_skema(url):
 
 def get_isp(ip):
     try:
-        url = f"http://ip-api.com/json/{ip}?fields=status,org"
-        r = requests.get(url, timeout=5)
+        r = requests.get(f"http://ip-api.com/json/{ip}?fields=status,org", timeout=5)
         data = r.json()
         if data['status'] == 'success':
             return data.get('org', 'Unknown')
@@ -41,67 +36,80 @@ def warna_status(code):
         return f"{RED}{code}{RESET}"
 
 def scan_satu_url(url, f):
-    def tulis(teks):
-        with lock:
-            f.write(teks + '\n')
-            print(teks)
-
     url = tambah_skema(url)
-    tulis(f"\n=== SCAN: {url} ===")
+    f.write(f"\n{url}\n")
+    print(f"\n{url}")
 
     try:
         domain = urlparse(url).netloc
         ip = socket.gethostbyname(domain)
-        tulis(f"IP: {ip}")
-        tulis(f"DNS: {domain} -> {ip}")
-
+        
+        # DNS
+        dns_line = f"DNS: {domain} -> {ip}"
+        f.write(dns_line + '\n')
+        print(dns_line)
+        
+        # ISP
         isp = get_isp(ip)
-        tulis(f"ISP: {isp}")
+        isp_line = f"ISP: {isp}"
+        f.write(isp_line + '\n')
+        print(isp_line)
 
-        with requests.get(url, timeout=15, stream=True, verify=False) as r:
+        with requests.get(url, timeout=15, verify=False) as r:
             status = r.status_code
-            tulis(f"Status: {warna_status(status)}")
+            s = f"Status: {warna_status(status)}"
+            f.write(s + '\n')
+            print(s)
             
             server = r.headers.get('Server', 'Not detected')
-            tulis(f"Server: {server}")
-            
-            cf = 'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'
+            f.write(f"Server: {server}\n")
+            print(f"Server: {server}")
+
+            # Cloudflare
+            headers_str = str(r.headers).lower()
+            cf = 'Protected' if 'cloudflare' in headers_str else 'Unprotected'
             cf_warna = f"{GREEN}{cf}{RESET}" if cf == 'Protected' else f"{RED}{cf}{RESET}"
-            tulis(f"Cloudflare: {cf_warna}")
+            cf_line = f"Cloudflare: {cf_warna}"
+            f.write(cf_line + '\n')
+            print(cf_line)
 
-            content = b""
-            for chunk in r.iter_content(chunk_size=8192):
-                content += chunk
-                if len(content) > 500000:
-                    break
-
-            soup = BeautifulSoup(content, 'html.parser')
+            soup = BeautifulSoup(r.text[:200000], 'html.parser')
             title = soup.title.string.strip() if soup.title else "No title"
-            tulis(f"\n[HTML]\nTitle: {title}")
-
-            tulis("[META TAG]")
-            count = 0
-            for meta in soup.find_all('meta'):
-                if count >= 20: break
-                name = meta.get('name') or meta.get('property')
-                content = meta.get('content')
-                if name and content:
-                    tulis(f"{name}: {content[:150]}")
-                    count += 1
+            f.write(f"Title: {title}\n\n")
+            print(f"Title: {title}")
 
     except Exception as e:
-        tulis(f"Error: {RED}{e}{RESET}")
+        err = f"Error: {RED}{e}{RESET}"
+        f.write(err + '\n')
+        print(err)
     
-    tulis("="*40)
+    f.write("-"*40 + '\n')
 
 def main():
     input_file = "list.txt"
     output_file = "hasil_scan.txt"
     MAX_URL = 30
-    THREADS = 15
     
     try:
         with open(input_file, 'r', encoding='utf-8') as file_list:
+            urls = [line.strip() for line in file_list if line.strip()]
+    except FileNotFoundError:
+        print(f"{RED}Error: File {input_file} nggak ketemu{RESET}")
+        return
+
+    urls = urls[:MAX_URL]
+    total = len(urls)
+    print(f"{CYAN}Total URL: {total}{RESET}\n")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"BATCH SCAN {total} URL\n")
+        for url in urls:
+            scan_satu_url(url, f)
+    
+    print(f"\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
+
+if __name__ == "__main__":
+    main()        with open(input_file, 'r', encoding='utf-8') as file_list:
             urls = [line.strip() for line in file_list if line.strip()]
     except FileNotFoundError:
         print(f"{RED}Error: File {input_file} nggak ketemu{RESET}")
