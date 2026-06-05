@@ -159,6 +159,35 @@ if __name__ == "__main__":
     print(f"\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
 
 if __name__ == "__main__":
+    main()        with open(input_file, 'r', encoding='utf-8') as file_list:
+            urls = [line.strip() for line in file_list if line.strip()]
+    except FileNotFoundError:
+        print(f"{RED}Error: File {input_file} nggak ketemu{RESET}")
+        return
+
+    if len(urls) > MAX_URL:
+        print(f"{YELLOW}Peringatan: URL lebih dari {MAX_URL}. Hanya {MAX_URL} pertama yang discan{RESET}")
+        urls = urls[:MAX_URL]
+
+    total = len(urls)
+    print(f"{CYAN}Total URL: {total}{RESET}")
+    print(f"Thread: {THREADS} URL barengan\n")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"=== BATCH SCAN {total} URL ===\n\n")
+        
+        try:
+            with ThreadPoolExecutor(max_workers=THREADS) as executor:
+                futures = [executor.submit(scan_satu_url, url, f) for url in urls]
+                for future in as_completed(futures):
+                    pass
+        except KeyboardInterrupt:
+            print(f"\n\n{RED}Scan dihentikan manual{RESET}")
+            f.write("\nScan dihentikan manual\n")
+    
+    print(f"\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
+
+if __name__ == "__main__":
     main()       
     with open(input_file, 'r', encoding='utf-8') as file_list:
             urls = [line.strip() for line in file_list if line.strip()]
