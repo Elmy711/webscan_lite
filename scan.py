@@ -5,8 +5,18 @@ import datetime
 from urllib.parse import urlparse
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-import time
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
+
+# Warna terminal
+GREEN = '\033[92m'
+RED = '\033[91m'
+YELLOW = '\033[93m'
+RESET = '\033[0m'
+CYAN = '\033[96m'
+
+lock = threading.Lock()  # biar print progress nggak tabrakan
 
 def tambah_skema(url):
     url = url.strip()
@@ -32,12 +42,14 @@ def print_progress(current, total, bar_length=30):
     progress = current / total
     filled = int(bar_length * progress)
     bar = '█' * filled + '░' * (bar_length - filled)
-    sys.stdout.write(f'\r[{bar}] {current}/{total} {progress*100:.1f}%')
-    sys.stdout.flush()
+    with lock:
+        sys.stdout.write(f'\r[{CYAN}{bar}{RESET}] {current}/{total} {progress*100:.1f}%')
+        sys.stdout.flush()
 
-def scan_satu_url(url, f):
+def scan_satu_url(url, f, nomor, total):
     def tulis(teks):
-        f.write(teks + '\n')  # cuma tulis ke file, terminal bersih
+        with lock:
+            f.write(teks + '\n')
 
     url = tambah_skema(url)
     tulis(f"\n=== SCAN: {url} ===")
@@ -53,11 +65,20 @@ def scan_satu_url(url, f):
         tulis(f"Country: {data_ip.get('country', 'Unknown')}")
 
         with requests.get(url, timeout=15, stream=True, verify=False) as r:
-            tulis(f"Status: {r.status_code}")
+            status = r.status_code
+            # Warna status code
+            if 200 <= status < 300:
+                status_text = f"{GREEN}{status}{RESET}"
+            elif 400 <= status < 500:
+                status_text = f"{RED}{status}{RESET}"
+            else:
+                status_text = f"{YELLOW}{status}{RESET}"
+            
+            tulis(f"Status: {status}")
             
             server = r.headers.get('Server', 'Not detected')
             tulis(f"Server: {server}")
-            tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'}")  # <- udah bener
+            tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'}")
 
             content = b""
             for chunk in r.iter_content(chunk_size=8192):
@@ -66,7 +87,6 @@ def scan_satu_url(url, f):
                     break
 
             soup = BeautifulSoup(content, 'html.parser')
-
             title = soup.title.string.strip() if soup.title else "No title"
             tulis(f"\n[HTML]\nTitle: {title}")
 
@@ -84,7 +104,13 @@ def scan_satu_url(url, f):
         tulis(f"Error: {e}")
     
     tulis("="*40)
-    time.sleep(2)
+    
+    # Update progress bar
+    with lock:
+        scan_satu_url.counter += 1
+        print_progress(scan_satu_url.counter, total)
+
+scan_satu_url.counter = 0
 
 def main():
     input_file = "list.txt"
@@ -98,6 +124,26 @@ def main():
         return
 
     total = len(urls)
+    print(f"Total URL: {total}")
+    print(f"Thread: 10 URL barengan\n")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"=== BATCH SCAN {total} URL ===\n\n")
+        
+        try:
+            # Threading: 10 worker jalan bareng
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [executor.submit(scan_satu_url, url, f, i, total) for i, url in enumerate(urls, 1)]
+                for future in as_completed(futures):
+                    pass  # progress udah diupdate di dalam fungsi
+        except KeyboardInterrupt:
+            print(f"\n\n{RED}Scan dihentikan manual{RESET}")
+            f.write("\nScan dihentikan manual\n")
+    
+    print(f"\n\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
+
+if __name__ == "__main__":
+    main()    total = len(urls)
     print(f"Total URL: {total}")
     print("Tekan Ctrl+C buat stop\n")
 
