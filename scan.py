@@ -9,7 +9,6 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
-# Warna terminal
 GREEN = '\033[92m'
 RED = '\033[91m'
 YELLOW = '\033[93m'
@@ -30,10 +29,7 @@ def get_ip_info(ip):
         r = requests.get(url, timeout=5)
         data = r.json()
         if data['status'] == 'success':
-            return {
-                'org': data.get('org', 'Unknown'),
-                'country': data.get('country', 'Unknown')
-            }
+            return {'org': data.get('org', 'Unknown'), 'country': data.get('country', 'Unknown')}
     except:
         pass
     return {'org': 'Unknown', 'country': 'Unknown'}
@@ -66,7 +62,6 @@ def scan_satu_url(url, f, total):
 
         with requests.get(url, timeout=15, stream=True, verify=False) as r:
             status = r.status_code
-            
             tulis(f"Status: {status}")
             
             server = r.headers.get('Server', 'Not detected')
@@ -102,6 +97,39 @@ def scan_satu_url(url, f, total):
         scan_satu_url.counter += 1
         print_progress(scan_satu_url.counter, total)
 
+scan_satu_url.counter = 0
+
+def main():
+    input_file = "list.txt"
+    output_file = f"hasil_scan_{datetime.date.today()}.txt"
+    
+    try:
+        with open(input_file, 'r', encoding='utf-8') as file_list:
+            urls = [line.strip() for line in file_list if line.strip()]
+    except FileNotFoundError:
+        print(f"Error: File {input_file} nggak ketemu. Bikin dulu isinya URL.")
+        return
+
+    total = len(urls)
+    print(f"Total URL: {total}")
+    print(f"Thread: 10 URL barengan\n")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"=== BATCH SCAN {total} URL ===\n\n")
+        
+        try:
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [executor.submit(scan_satu_url, url, f, total) for url in urls]
+                for future in as_completed(futures):
+                    pass
+        except KeyboardInterrupt:
+            print(f"\n\n{RED}Scan dihentikan manual{RESET}")
+            f.write("\nScan dihentikan manual\n")
+    
+    print(f"\n\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
+
+if __name__ == "__main__":
+    main()
 scan_satu_url.counter = 0
 
 def main():
