@@ -47,4 +47,4 @@ def main():
     print(f"\n\n{GREEN}[SELESAI]{RESET} hasil_scan_{datetime.date.today()}.txt")
 
 if __name__ == "__main__":
-    main
+    main()
