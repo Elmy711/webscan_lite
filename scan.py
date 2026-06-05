@@ -1,4 +1,3 @@
-rm -f scan.py && cat > scan.py << 'ENDOFSCRIPT'
 import requests
 from bs4 import BeautifulSoup
 import socket
@@ -48,5 +47,4 @@ def main():
     print(f"\n\n{GREEN}[SELESAI]{RESET} hasil_scan_{datetime.date.today()}.txt")
 
 if __name__ == "__main__":
-    main()
-ENDOFSCRIPT
+    main
