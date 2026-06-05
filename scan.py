@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import socket
 import datetime
+from urllib.parse import urlparse  # <- ini jangan dihapus
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import time
@@ -13,7 +14,6 @@ def tambah_skema(url):
     return url
 
 def get_ip_info(ip):
-    # Ganti ipapi -> ip-api.com
     try:
         url = f"http://ip-api.com/json/{ip}?fields=status,org,country"
         r = requests.get(url, timeout=5)
@@ -37,15 +37,14 @@ def scan_satu_url(url, f):
     tulis(f"Waktu: {datetime.datetime.now()}")
 
     try:
-        domain = urlparse(url).netloc
+        domain = urlparse(url).netloc  # <- ini butuh import urlparse
         ip = socket.gethostbyname(domain)
         tulis(f"IP: {ip}")
         tulis(f"DNS: {domain} -> {ip}")
 
-        # Pake ip-api.com, nggak perlu install library lagi
         data_ip = get_ip_info(ip)
         tulis(f"ISP: {data_ip.get('org', 'Unknown')}")
-        tulis(f"Country: {data.get('country', 'Unknown')}")  # bonus info
+        tulis(f"Country: {data_ip.get('country', 'Unknown')}")
 
         with requests.get(url, timeout=15, stream=True, verify=False) as r:
             tulis(f"Status: {r.status_code}")
@@ -79,7 +78,7 @@ def scan_satu_url(url, f):
         tulis(f"Error: {e}")
     
     tulis("="*40)
-    time.sleep(3) # delay 3 detik
+    time.sleep(3)
 
 def main():
     input_file = "list.txt"
@@ -102,5 +101,7 @@ def main():
     
     print(f"\n[SELESAI] Semua hasil ada di: {output_file}")
 
+if __name__ == "__main__":
+    main()
 if __name__ == "__main__":
     main()
