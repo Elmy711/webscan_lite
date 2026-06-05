@@ -1,3 +1,4 @@
+cat > scan.py << 'EOF'
 import requests
 from bs4 import BeautifulSoup
 import socket
@@ -11,9 +12,8 @@ import threading
 
 GREEN = '\033[92m'
 RED = '\033[91m'
-YELLOW = '\033[93m'
-RESET = '\033[0m'
 CYAN = '\033[96m'
+RESET = '\033[0m'
 
 lock = threading.Lock()
 scan_satu_url.counter = 0
@@ -64,7 +64,6 @@ def scan_satu_url(url, f, total):
         with requests.get(url, timeout=15, stream=True, verify=False) as r:
             status = r.status_code
             tulis(f"Status: {status}")
-            
             server = r.headers.get('Server', 'Not detected')
             tulis(f"Server: {server}")
             tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'}")
@@ -95,13 +94,7 @@ def scan_satu_url(url, f, total):
     tulis("="*40)
     
     with lock:
-        scan_satu_url.counter += 1
-        print_progress(scan_satu_url.counter, total)
-
-def main():
-    input_file = "list.txt"
-    output_file = f"hasil_scan_{datetime.date.today()}.txt"
-    
+        scan    
     try:
         with open(input_file, 'r', encoding='utf-8') as file_list:
             urls = [line.strip() for line in file_list if line.strip()]
