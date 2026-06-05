@@ -37,7 +37,7 @@ def print_progress(current, total, bar_length=30):
 
 def scan_satu_url(url, f):
     def tulis(teks):
-        f.write(teks + '\n')  # hapus print biar terminal bersih
+        f.write(teks + '\n')  # cuma tulis ke file, terminal bersih
 
     url = tambah_skema(url)
     tulis(f"\n=== SCAN: {url} ===")
@@ -57,7 +57,62 @@ def scan_satu_url(url, f):
             
             server = r.headers.get('Server', 'Not detected')
             tulis(f"Server: {server}")
-            tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unif __name__ == "__main__":
-    main()
+            tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'}")  # <- udah bener
+
+            content = b""
+            for chunk in r.iter_content(chunk_size=8192):
+                content += chunk
+                if len(content) > 500000:
+                    break
+
+            soup = BeautifulSoup(content, 'html.parser')
+
+            title = soup.title.string.strip() if soup.title else "No title"
+            tulis(f"\n[HTML]\nTitle: {title}")
+
+            tulis("[META TAG]")
+            count = 0
+            for meta in soup.find_all('meta'):
+                if count >= 20: break
+                name = meta.get('name') or meta.get('property')
+                content = meta.get('content')
+                if name and content:
+                    tulis(f"{name}: {content[:150]}")
+                    count += 1
+
+    except Exception as e:
+        tulis(f"Error: {e}")
+    
+    tulis("="*40)
+    time.sleep(2)
+
+def main():
+    input_file = "list.txt"
+    output_file = f"hasil_scan_{datetime.date.today()}.txt"
+    
+    try:
+        with open(input_file, 'r', encoding='utf-8') as file_list:
+            urls = [line.strip() for line in file_list if line.strip()]
+    except FileNotFoundError:
+        print(f"Error: File {input_file} nggak ketemu. Bikin dulu isinya URL.")
+        return
+
+    total = len(urls)
+    print(f"Total URL: {total}")
+    print("Tekan Ctrl+C buat stop\n")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"=== BATCH SCAN {total} URL ===\n\n")
+        
+        try:
+            for i, url in enumerate(urls, 1):
+                print_progress(i, total)
+                scan_satu_url(url, f)
+        except KeyboardInterrupt:
+            print("\n\nScan dihentikan manual")
+            f.write("\nScan dihentikan manual\n")
+    
+    print(f"\n\n[SELESAI] Hasil: {output_file}")
+
 if __name__ == "__main__":
     main()
