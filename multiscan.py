@@ -65,7 +65,8 @@ f = open('hasil_scan_2026-06-05.txt', 'w', encoding='utf-8')
 sukses = gagal = 0
 results = [None] * len(urls)
 
-# Thread 20, bisa dinaikin kalo internet kenceng
+print(f'{C}Scanning... tunggu bentar{Z}\n')
+
 with ThreadPoolExecutor(max_workers=20) as executor:
     futures = {executor.submit(scan_one, i+1, u): i for i, u in enumerate(urls)}
     for future in as_completed(futures):
@@ -73,8 +74,11 @@ with ThreadPoolExecutor(max_workers=20) as executor:
         results[idx-1] = res
         if ok: sukses += 1
         else: gagal += 1
-        print(res + '-'*50)
-        f.write(res + '-'*50 + '\n\n')
+
+# Baru print urut setelah semua selesai
+for res in results:
+    print(res + '-'*50)
+    f.write(res + '-'*50 + '\n\n')
 
 f.close()
 print(f'\n{G}[SELESAI]{Z} hasil_scan_2026-06-05.txt')
