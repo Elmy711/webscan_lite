@@ -2,10 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 import socket
 import datetime
-from urllib.parse import urlparse  # <- ini jangan dihapus
+from urllib.parse import urlparse
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import time
+import sys
 
 def tambah_skema(url):
     url = url.strip()
@@ -27,17 +28,22 @@ def get_ip_info(ip):
         pass
     return {'org': 'Unknown', 'country': 'Unknown'}
 
+def print_progress(current, total, bar_length=30):
+    progress = current / total
+    filled = int(bar_length * progress)
+    bar = '█' * filled + '░' * (bar_length - filled)
+    sys.stdout.write(f'\r[{bar}] {current}/{total} {progress*100:.1f}%')
+    sys.stdout.flush()
+
 def scan_satu_url(url, f):
     def tulis(teks):
-        print(teks)
-        f.write(teks + '\n')
+        f.write(teks + '\n')  # hapus print biar terminal bersih
 
     url = tambah_skema(url)
     tulis(f"\n=== SCAN: {url} ===")
-    tulis(f"Waktu: {datetime.datetime.now()}")
 
     try:
-        domain = urlparse(url).netloc  # <- ini butuh import urlparse
+        domain = urlparse(url).netloc
         ip = socket.gethostbyname(domain)
         tulis(f"IP: {ip}")
         tulis(f"DNS: {domain} -> {ip}")
@@ -51,57 +57,7 @@ def scan_satu_url(url, f):
             
             server = r.headers.get('Server', 'Not detected')
             tulis(f"Server: {server}")
-            tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'}")
-
-            content = b""
-            for chunk in r.iter_content(chunk_size=8192):
-                content += chunk
-                if len(content) > 500000:
-                    break
-
-            soup = BeautifulSoup(content, 'html.parser')
-
-            title = soup.title.string.strip() if soup.title else "No title"
-            tulis(f"\n[HTML]\nTitle: {title}")
-
-            tulis("[META TAG]")
-            count = 0
-            for meta in soup.find_all('meta'):
-                if count >= 20: break
-                name = meta.get('name') or meta.get('property')
-                content = meta.get('content')
-                if name and content:
-                    tulis(f"{name}: {content[:150]}")
-                    count += 1
-
-    except Exception as e:
-        tulis(f"Error: {e}")
-    
-    tulis("="*40)
-    time.sleep(3)
-
-def main():
-    input_file = "list.txt"
-    output_file = f"hasil_scan_{datetime.date.today()}.txt"
-    
-    try:
-        with open(input_file, 'r', encoding='utf-8') as file_list:
-            urls = [line.strip() for line in file_list if line.strip()]
-    except FileNotFoundError:
-        print(f"Error: File {input_file} nggak ketemu. Bikin dulu isinya URL.")
-        return
-
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(f"=== BATCH SCAN {len(urls)} URL ===\n")
-        f.write(f"Mulai: {datetime.datetime.now()}\n\n")
-        
-        for i, url in enumerate(urls, 1):
-            print(f"\n[{i}/{len(urls)}] Scanning...")
-            scan_satu_url(url, f)
-    
-    print(f"\n[SELESAI] Semua hasil ada di: {output_file}")
-
-if __name__ == "__main__":
+            tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unif __name__ == "__main__":
     main()
 if __name__ == "__main__":
     main()
