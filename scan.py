@@ -7,12 +7,13 @@ from bs4 import BeautifulSoup
 G = '\033[92m'; R = '\033[91m'; Y = '\033[93m'; Z = '\033[0m'; C = '\033[96m'
 
 def clean_url(u):
-    # Hapus semua karakter invisible + spasi
     u = u.strip()
+    # Hapus karakter invisible RTL/BOM doang, huruf aman
     u = re.sub(r'[\u200e\u200f\u200b\ufeff\u202a-\u202e]', '', u)
-    # Ambil yang bentuk domain doang
-    u = re.sub(r'[^a-zA-Z0-9.-]', '', u)
-    return 'https://' + u if u and not u.startswith('http') else u
+    if not u: return ''
+    if not u.startswith('http'):
+        u = 'https://' + u
+    return u
 
 def isp(ip):
     try:
@@ -25,7 +26,7 @@ def warna(c):
     return f'{G}{c}{Z}' if 200 <= c < 300 else f'{Y}{c}{Z}' if 300 <= c < 400 else f'{R}{c}{Z}'
 
 urls_raw = open('list.txt', encoding='utf-8', errors='ignore').readlines()
-urls = [clean_url(l) for l in urls_raw if l.strip() and clean_url(l)]
+urls = [clean_url(l) for l in urls_raw if clean_url(l)]
 
 print(f'{C}Total baris: {len(urls_raw)} | URL valid: {len(urls)}{Z}\n')
 
@@ -43,13 +44,13 @@ for no, u in enumerate(urls, 1):
         print(f'ISP: {isp(ip)}')
         f.write(f'DNS: {d} -> {ip}\nISP: {isp(ip)}\n')
 
-        r = requests.get(u, timeout=20, verify=False)
+        r = requests.get(u, timeout=20, verify=False, headers={'User-Agent':'Mozilla/5.0'})
         st = f'Status: {warna(r.status_code)}'
         sv = f'Server: {r.headers.get("Server", "-")}'
         cf = 'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'
         cf = f'Cloudflare: {G+cf+Z}' if cf == 'Protected' else f'Cloudflare: {R+cf+Z}'
         t = BeautifulSoup(r.text[:200000], 'html.parser').title
-        t = t.string.strip() if t else 'No title'
+        t = t.string.strip() if t and t.string else 'No title'
 
         print(st); print(sv); print(cf); print(f'Title: {t}\n')
         f.write(st + '\n' + sv + '\n' + cf + '\n' + f'Title: {t}\n\n')
