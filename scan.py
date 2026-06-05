@@ -6,6 +6,7 @@ import ipapi
 from urllib.parse import urlparse
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import time
 
 def tambah_skema(url):
     url = url.strip()
@@ -26,21 +27,20 @@ def scan_satu_url(url, f):
         domain = urlparse(url).netloc
         ip = socket.gethostbyname(domain)
         tulis(f"IP: {ip}")
+        tulis(f"DNS: {domain} -> {ip}")  # DNS ditambahin
 
-        # ISP aja, negara udah dihapus
         data_ip = ipapi.location(ip=ip)
         tulis(f"ISP: {data_ip.get('org', 'Unknown')}")
 
         with requests.get(url, timeout=15, stream=True, verify=False) as r:
             tulis(f"Status: {r.status_code}")
             
-            tulis("[HEADER]")
+            # [HEADER] dihapus, langsung server + cloudflare
             server = r.headers.get('Server', 'Not detected')
             tulis(f"Server: {server}")
-            
             tulis(f"Cloudflare: {'Protected' if 'cloudflare' in str(r.headers).lower() else 'Unprotected'}")
 
-            # Baca 500KB pertama aja
+            # Baca max 500KB biar hemat RAM
             content = b""
             for chunk in r.iter_content(chunk_size=8192):
                 content += chunk
@@ -66,6 +66,7 @@ def scan_satu_url(url, f):
         tulis(f"Error: {e}")
     
     tulis("="*40)
+    time.sleep(3) # delay 3 detik
 
 def main():
     input_file = "list.txt"
