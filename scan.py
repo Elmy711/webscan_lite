@@ -1,4 +1,3 @@
-cat > scan.py << 'EOF'
 import requests
 from bs4 import BeautifulSoup
 import socket
@@ -8,7 +7,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
-# Warna terminal
 GREEN = '\033[92m'
 RED = '\033[91m'
 YELLOW = '\033[93m'
@@ -23,7 +21,7 @@ def tambah_skema(url):
         url = 'https://' + url
     return url
 
-def get_ip_info(ip):
+def get_isp(ip):
     try:
         url = f"http://ip-api.com/json/{ip}?fields=status,org"
         r = requests.get(url, timeout=5)
@@ -46,7 +44,7 @@ def scan_satu_url(url, f):
     def tulis(teks):
         with lock:
             f.write(teks + '\n')
-            print(teks)  # print ke terminal juga
+            print(teks)
 
     url = tambah_skema(url)
     tulis(f"\n=== SCAN: {url} ===")
@@ -57,13 +55,12 @@ def scan_satu_url(url, f):
         tulis(f"IP: {ip}")
         tulis(f"DNS: {domain} -> {ip}")
 
-        isp = get_ip_info(ip)
+        isp = get_isp(ip)
         tulis(f"ISP: {isp}")
 
         with requests.get(url, timeout=15, stream=True, verify=False) as r:
             status = r.status_code
-            status_warna = warna_status(status)
-            tulis(f"Status: {status_warna}")
+            tulis(f"Status: {warna_status(status)}")
             
             server = r.headers.get('Server', 'Not detected')
             tulis(f"Server: {server}")
@@ -100,8 +97,40 @@ def scan_satu_url(url, f):
 def main():
     input_file = "list.txt"
     output_file = "hasil_scan.txt"
+    MAX_URL = 30
+    THREADS = 15
     
     try:
+        with open(input_file, 'r', encoding='utf-8') as file_list:
+            urls = [line.strip() for line in file_list if line.strip()]
+    except FileNotFoundError:
+        print(f"{RED}Error: File {input_file} nggak ketemu{RESET}")
+        return
+
+    if len(urls) > MAX_URL:
+        print(f"{YELLOW}Peringatan: URL lebih dari {MAX_URL}. Hanya {MAX_URL} pertama yang discan{RESET}")
+        urls = urls[:MAX_URL]
+
+    total = len(urls)
+    print(f"{CYAN}Total URL: {total}{RESET}")
+    print(f"Thread: {THREADS} URL barengan\n")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"=== BATCH SCAN {total} URL ===\n\n")
+        
+        try:
+            with ThreadPoolExecutor(max_workers=THREADS) as executor:
+                futures = [executor.submit(scan_satu_url, url, f) for url in urls]
+                for future in as_completed(futures):
+                    pass
+        except KeyboardInterrupt:
+            print(f"\n\n{RED}Scan dihentikan manual{RESET}")
+            f.write("\nScan dihentikan manual\n")
+    
+    print(f"\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
+
+if __name__ == "__main__":
+    main()    try:
         with open(input_file, 'r', encoding='utf-8') as file_list:
             urls = [line.strip() for line in file_list if line.strip()]
     except FileNotFoundError:
