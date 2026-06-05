@@ -44,12 +44,10 @@ def scan_satu_url(url, f):
         domain = urlparse(url).netloc
         ip = socket.gethostbyname(domain)
         
-        # DNS
         dns_line = f"DNS: {domain} -> {ip}"
         f.write(dns_line + '\n')
         print(dns_line)
         
-        # ISP
         isp = get_isp(ip)
         isp_line = f"ISP: {isp}"
         f.write(isp_line + '\n')
@@ -65,7 +63,6 @@ def scan_satu_url(url, f):
             f.write(f"Server: {server}\n")
             print(f"Server: {server}")
 
-            # Cloudflare
             headers_str = str(r.headers).lower()
             cf = 'Protected' if 'cloudflare' in headers_str else 'Unprotected'
             cf_warna = f"{GREEN}{cf}{RESET}" if cf == 'Protected' else f"{RED}{cf}{RESET}"
@@ -101,6 +98,15 @@ def main():
     total = len(urls)
     print(f"{CYAN}Total URL: {total}{RESET}\n")
 
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"BATCH SCAN {total} URL\n")
+        for url in urls:
+            scan_satu_url(url, f)
+    
+    print(f"\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
+
+if __name__ == "__main__":
+    main()
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(f"BATCH SCAN {total} URL\n")
         for url in urls:
@@ -254,4 +260,3 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     main()
-EOF
