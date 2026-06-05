@@ -109,7 +109,8 @@ def main():
     print(f"\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
 
 if __name__ == "__main__":
-    main()        with open(input_file, 'r', encoding='utf-8') as file_list:
+    main()        
+    with open(input_file, 'r', encoding='utf-8') as file_list:
             urls = [line.strip() for line in file_list if line.strip()]
     except FileNotFoundError:
         print(f"{RED}Error: File {input_file} nggak ketemu{RESET}")
