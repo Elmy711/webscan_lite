@@ -16,6 +16,7 @@ RESET = '\033[0m'
 CYAN = '\033[96m'
 
 lock = threading.Lock()
+scan_satu_url.counter = 0
 
 def tambah_skema(url):
     url = url.strip()
@@ -97,11 +98,37 @@ def scan_satu_url(url, f, total):
         scan_satu_url.counter += 1
         print_progress(scan_satu_url.counter, total)
 
-scan_satu_url.counter = 0
-
 def main():
     input_file = "list.txt"
     output_file = f"hasil_scan_{datetime.date.today()}.txt"
+    
+    try:
+        with open(input_file, 'r', encoding='utf-8') as file_list:
+            urls = [line.strip() for line in file_list if line.strip()]
+    except FileNotFoundError:
+        print(f"Error: File {input_file} nggak ketemu. Bikin dulu isinya URL.")
+        return
+
+    total = len(urls)
+    print(f"Total URL: {total}")
+    print(f"Thread: 10 URL barengan\n")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"=== BATCH SCAN {total} URL ===\n\n")
+        
+        try:
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [executor.submit(scan_satu_url, url, f, total) for url in urls]
+                for future in as_completed(futures):
+                    pass
+        except KeyboardInterrupt:
+            print(f"\n\n{RED}Scan dihentikan manual{RESET}")
+            f.write("\nScan dihentikan manual\n")
+    
+    print(f"\n\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
+
+if __name__ == "__main__":
+    main()    output_file = f"hasil_scan_{datetime.date.today()}.txt"
     
     try:
         with open(input_file, 'r', encoding='utf-8') as file_list:
