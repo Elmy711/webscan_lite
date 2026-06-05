@@ -24,7 +24,7 @@ def isp(ip):
 def warna(c):
     return f'{G}{c}{Z}' if 200 <= c < 300 else f'{Y}{c}{Z}' if 300 <= c < 400 else f'{R}{c}{Z}'
 
-urls = [l.strip() for l in open('list.txt', encoding='utf-8') if l.strip()]
+urls = [l.strip() for l in open('list.txt', encoding='utf-8') if l.strip(100)]
 print(f'{C}Total URL: {len(urls)}{Z}\n')
 
 f = open('hasil_scan.txt', 'w', encoding='utf-8')
