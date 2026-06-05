@@ -16,7 +16,7 @@ YELLOW = '\033[93m'
 RESET = '\033[0m'
 CYAN = '\033[96m'
 
-lock = threading.Lock()  # biar print progress nggak tabrakan
+lock = threading.Lock()
 
 def tambah_skema(url):
     url = url.strip()
@@ -46,7 +46,7 @@ def print_progress(current, total, bar_length=30):
         sys.stdout.write(f'\r[{CYAN}{bar}{RESET}] {current}/{total} {progress*100:.1f}%')
         sys.stdout.flush()
 
-def scan_satu_url(url, f, nomor, total):
+def scan_satu_url(url, f, total):
     def tulis(teks):
         with lock:
             f.write(teks + '\n')
@@ -66,13 +66,6 @@ def scan_satu_url(url, f, nomor, total):
 
         with requests.get(url, timeout=15, stream=True, verify=False) as r:
             status = r.status_code
-            # Warna status code
-            if 200 <= status < 300:
-                status_text = f"{GREEN}{status}{RESET}"
-            elif 400 <= status < 500:
-                status_text = f"{RED}{status}{RESET}"
-            else:
-                status_text = f"{YELLOW}{status}{RESET}"
             
             tulis(f"Status: {status}")
             
@@ -102,6 +95,46 @@ def scan_satu_url(url, f, nomor, total):
 
     except Exception as e:
         tulis(f"Error: {e}")
+    
+    tulis("="*40)
+    
+    with lock:
+        scan_satu_url.counter += 1
+        print_progress(scan_satu_url.counter, total)
+
+scan_satu_url.counter = 0
+
+def main():
+    input_file = "list.txt"
+    output_file = f"hasil_scan_{datetime.date.today()}.txt"
+    
+    try:
+        with open(input_file, 'r', encoding='utf-8') as file_list:
+            urls = [line.strip() for line in file_list if line.strip()]
+    except FileNotFoundError:
+        print(f"Error: File {input_file} nggak ketemu. Bikin dulu isinya URL.")
+        return
+
+    total = len(urls)
+    print(f"Total URL: {total}")
+    print(f"Thread: 10 URL barengan\n")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(f"=== BATCH SCAN {total} URL ===\n\n")
+        
+        try:
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [executor.submit(scan_satu_url, url, f, total) for url in urls]
+                for future in as_completed(futures):
+                    pass
+        except KeyboardInterrupt:
+            print(f"\n\n{RED}Scan dihentikan manual{RESET}")
+            f.write("\nScan dihentikan manual\n")
+    
+    print(f"\n\n{GREEN}[SELESAI]{RESET} Hasil: {output_file}")
+
+if __name__ == "__main__":
+    main()        tulis(f"Error: {e}")
     
     tulis("="*40)
     
